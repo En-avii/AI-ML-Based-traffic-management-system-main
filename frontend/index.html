@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Traffic Dashboard</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Your provided custom CSS */
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
+
+        /* 🌙 Custom global styles */
+        body {
+            @apply bg-gray-900 text-gray-100 antialiased;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            @apply bg-gray-800;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.4);
+            /* gray-400 */
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(156, 163, 175, 0.6);
+        }
+
+        a {
+            @apply text-blue-400 hover:text-blue-300;
+        }
+
+        button {
+            @apply transition-colors duration-200;
+        }
+
+        /* --------------------------------- */
+        /* Additional styles for components  */
+        /* --------------------------------- */
+
+        /* Traffic light circles */
+        .traffic-light {
+            @apply w-4 h-4 rounded-full bg-gray-700 border border-gray-900 transition-all;
+        }
+
+        .traffic-light.red {
+            @apply bg-red-500 shadow-lg shadow-red-500/50;
+        }
+
+        .traffic-light.yellow {
+            @apply bg-yellow-500 shadow-lg shadow-yellow-500/50;
+        }
+
+        .traffic-light.green {
+            @apply bg-green-500 shadow-lg shadow-green-500/50;
+        }
+
+        /* Dashed dropzone */
+        .dropzone {
+            @apply border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center p-12 text-center text-gray-400 transition-all;
+        }
+
+        .dropzone.dragover {
+            @apply border-blue-500 bg-gray-800 text-blue-400;
+        }
+
+        /* Tab content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Custom chart styling for SVG */
+        .chart-grid-line {
+            stroke: theme('colors.gray.700');
+            stroke-dasharray: 2 3;
+        }
+
+        .chart-label {
+            fill: theme('colors.gray.400');
+            font-size: 10px;
+        }
+
+        .chart-line {
+            stroke: theme('colors.blue.500');
+            stroke-width: 2;
+            fill: url(#line-gradient);
+        }
+
+        .chart-bar {
+            fill: theme('colors.blue.600');
+            transition: fill 0.2s;
+        }
+
+        .chart-bar:hover {
+            fill: theme('colors.blue.500');
+        }
+
+        .chart-donut-segment {
+            transition: opacity 0.2s;
+        }
+
+        .chart-donut:hover .chart-donut-segment {
+            opacity: 0.5;
+        }
+
+        .chart-donut:hover .chart-donut-segment:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen">
+
+    <!-- Header -->
+    <header class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <!-- Left: Title -->
+            <div class="flex items-center space-x-3">
+                <!-- Icon -->
+                <svg class="w-8 h-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M6.75 7.5l3 2.25-3 2.25m3 0h-3m2.25 0l3 2.25-3 2.25m3 0h-3m-2.25 0l3 2.25-3 2.25m3 0h-3M6.75 16.5l3-2.25-3-2.25m3 0h3m-3 0l3-2.25 3 2.25m-3 0h3m2.25 0l3-2.25-3-2.25m3 0h3m-3 0l3-2.25 3 2.25m-3 0h3m-2.25 0l3-2.25-3-2.25m3 0h3" />
+                </svg>
+                <h1 class="text-xl font-bold text-white">Smart Traffic Grid</h1>
+            </div>
+
+            <!-- Right: Status & Controls -->
+            <div class="flex items-center space-x-6">
+                <!-- Status Indicator -->
+                <div class="flex items-center space-x-2">
+                    <div id="status-dot" class="w-3 h-3 rounded-full bg-red-500 transition-all shadow-lg shadow-red-500/50">
+                    </div>
+                    <span id="status-text" class="text-sm font-medium text-red-400">Offline</span>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex space-x-2">
+                    <button id="start-sim-btn"
+                        class="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Start Sim
+                    </button>
+                    <button id="stop-sim-btn"
+                        class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                        Stop Sim
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="bg-gray-800 border-b border-gray-700 sticky top-[69px] z-10">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-6" role="tablist">
+                <button role="tab" aria-selected="true" data-tab="live"
+                    class="tab-btn active text-sm font-medium py-3 px-1 border-b-2 border-blue-500 text-white">
+                    Live View
+                </button>
+                <button role="tab" aria-selected="false" data-tab="detection"
+                    class="tab-btn text-sm font-medium py-3 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500">
+                    Detection
+                </button>
+                <button role="tab" aria-selected="false" data-tab="analytics"
+                    class="tab-btn text-sm font-medium py-3 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500">
+                    Analytics
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6">
+        <div class="container mx-auto">
+            <!-- Tab 1: Live View -->
+            <div id="tab-live" class="tab-content active">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Column: Intersection -->
+                    <div class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                        <h2 class="text-lg font-semibold text-white mb-4">Intersection 101-A</h2>
+                        <!-- Intersection Visualization -->
+                        <div class="relative w-full aspect-[4/3] bg-gray-700 rounded-lg overflow-hidden border-2 border-gray-600">
+                            <!-- Roads -->
+                            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1/4 bg-gray-600"></div>
+                            <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1/4 bg-gray-600"></div>
+                            <!-- Center -->
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/4 h-1/4 bg-gray-700 border-4 border-gray-500"></div>
+
+                            <!-- North Approach -->
+                            <div class="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center space-y-2">
+                                <!-- Vehicle Count -->
+                                <div class="bg-gray-900/80 text-white px-3 py-1 rounded-md text-sm font-mono shadow-lg">N: <span id="count-n">0</span></div>
+                                <!-- Light -->
+                                <div class="flex space-x-1 bg-gray-900 p-1 rounded-md">
+                                    <div id="light-n-r" class="traffic-light red"></div>
+                                    <div id="light-n-y" class="traffic-light"></div>
+                                    <div id="light-n-g" class="traffic-light"></div>
+                                </div>
+                            </div>
+                            <!-- South Approach -->
+                            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col-reverse items-center space-y-2 space-y-reverse">
+                                <div class="bg-gray-900/80 text-white px-3 py-1 rounded-md text-sm font-mono shadow-lg">S: <span id="count-s">0</span></div>
+                                <div class="flex space-x-1 bg-gray-900 p-1 rounded-md">
+                                    <div id="light-s-r" class="traffic-light red"></div>
+                                    <div id="light-s-y" class="traffic-light"></div>
+                                    <div id="light-s-g" class="traffic-light"></div>
+                                </div>
+                            </div>
+                            <!-- West Approach -->
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                                <div class="bg-gray-900/80 text-white px-3 py-1 rounded-md text-sm font-mono shadow-lg">W: <span id="count-w">0</span></div>
+                                <div class="flex space-x-1 bg-gray-900 p-1 rounded-md">
+                                    <div id="light-w-r" class="traffic-light green"></div>
+                                    <div id="light-w-y" class="traffic-light"></div>
+                                    <div id="light-w-g" class="traffic-light"></div>
+                                </div>
+                            </div>
+                            <!-- East Approach -->
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 flex flex-row-reverse items-center space-x-2 space-x-reverse">
+                                <div class="bg-gray-900/80 text-white px-3 py-1 rounded-md text-sm font-mono shadow-lg">E: <span id="count-e">0</span></div>
+                                <div class="flex space-x-1 bg-gray-900 p-1 rounded-md">
+                                    <div id="light-e-r" class="traffic-light green"></div>
+                                    <div id="light-e-y" class="traffic-light"></div>
+                                    <div id="light-e-g" class="traffic-light"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Metrics -->
+                    <div class="space-y-6">
+                        <!-- Live Metrics -->
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                            <h2 class="text-lg font-semibold text-white mb-4">Live Metrics</h2>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-sm text-gray-400">Total Vehicles</span>
+                                    <span id="metric-total" class="text-2xl font-semibold text-white">0</span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-sm text-gray-400">Avg. Wait Time</span>
+                                    <span id="metric-wait" class="text-2xl font-semibold text-white">0s</span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-sm text-gray-400">Flow Rate</span>
+                                    <span id="metric-flow" class="text-2xl font-semibold text-white">0 <span class="text-base font-normal text-gray-400">veh/hr</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Emergency Alert -->
+                        <div id="alert-box" class="bg-red-800/20 border border-red-700 p-4 rounded-lg shadow-lg hidden">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-6 h-6 text-red-400 animate-pulse" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+                                </svg>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-red-300">Emergency Vehicle Detected</h3>
+                                    <p class="text-xs text-red-400">Clearing path for Ambulance on N-Bound.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Detection -->
+            <div id="tab-detection" class="tab-content">
+                <div class="max-w-3xl mx-auto space-y-6">
+                    <!-- File Upload -->
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                        <h2 class="text-lg font-semibold text-white mb-4">Manual Detection</h2>
+                        <div id="dropzone" class="dropzone">
+                            <svg class="w-12 h-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                            </svg>
+                            <p class="mt-2 font-medium">Drop an image to analyze</p>
+                            <p class="text-xs">or click to upload (PNG, JPG)</p>
+                            <input type="file" id="file-input" class="hidden" accept="image/png, image/jpeg">
+                        </div>
+                    </div>
+                    <!-- Detection Results -->
+                    <div id="detection-results" class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 hidden">
+                        <div class="p-6">
+                            <h2 class="text-lg font-semibold text-white mb-4">Analysis Results</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Annotated Image -->
+                                <div>
+                                    <img src="https://placehold.co/600x400/556677/FFF?text=Annotated+Image"
+                                        alt="Annotated" class="rounded-md border border-gray-700">
+                                </div>
+                                <!-- Detections -->
+                                <div class="space-y-4">
+                                    <div class="bg-gray-700 p-4 rounded-lg">
+                                        <span class="text-sm text-gray-400">Total Detections</span>
+                                        <p class="text-3xl font-bold text-white">14</p>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <h3 class="text-sm font-medium text-gray-400">Objects Found</h3>
+                                        <ul class="divide-y divide-gray-700">
+                                            <li class="flex justify-between py-2">
+                                                <span class="text-sm text-gray-200">Car</span>
+                                                <span class="text-sm font-medium text-white bg-blue-600 px-2 py-0.5 rounded-full">8</span>
+                                            </li>
+                                            <li class="flex justify-between py-2">
+                                                <span class="text-sm text-gray-200">Truck</span>
+                                                <span class="text-sm font-medium text-white bg-blue-600 px-2 py-0.5 rounded-full">2</span>
+                                            </li>
+                                            <li class="flex justify-between py-2">
+                                                <span class="text-sm text-gray-200">Bus</span>
+                                                <span class="text-sm font-medium text-white bg-blue-600 px-2 py-0.5 rounded-full">1</span>
+                                            </li>
+                                            <li class="flex justify-between py-2">
+                                                <span class="text-sm text-gray-200">Motorcycle</span>
+                                                <span class="text-sm font-medium text-white bg-blue-600 px-2 py-0.5 rounded-full">3</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Analytics -->
+            <div id="tab-analytics" class="tab-content">
+                <div class="space-y-6">
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                            <span class="text-sm text-gray-400">Total Vehicles (24h)</span>
+                            <p class="text-3xl font-bold text-white">28,409</p>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                            <span class="text-sm text-gray-400">Avg. Wait Time</span>
+                            <p class="text-3xl font-bold text-white">24.5s</p>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                            <span class="text-sm text-gray-400">Peak Hour</span>
+                            <p class="text-3xl font-bold text-white">17:30</p>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                            <span class="text-sm text-gray-400">Incidents (24h)</span>
+                            <p class="text-3xl font-bold text-red-500">2</p>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Line Chart -->
+                        <div class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                            <h2 class="text-lg font-semibold text-white mb-4">Traffic Volume (Last 24h)</h2>
+                            <!-- Inline SVG Line Chart -->
+                            <svg viewBox="0 0 300 150" class="w-full h-auto">
+                                <defs>
+                                    <linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3" />
+                                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+                                    </linearGradient>
+                                </defs>
+                                <!-- Grid Lines -->
+                                <line class="chart-grid-line" x1="0" y1="30" x2="300" y2="30"></line>
+                                <line class="chart-grid-line" x1="0" y1="60" x2="300" y2="60"></line>
+                                <line class="chart-grid-line" x1="0" y1="90" x2="300" y2="90"></line>
+                                <line class="chart-grid-line" x1="0" y1="120" x2="300" y2="120"></line>
+                                <!-- Data Line -->
+                                <path class="chart-line" d="M 0 100 L 25 110 L 50 90 L 75 80 L 100 60 L 125 70 L 150 50 L 175 40 L 200 60 L 225 90 L 250 110 L 275 100 L 300 80 V 150 H 0 Z" />
+                                <!-- X-Axis Labels -->
+                                <text class="chart-label" x="0" y="145">00:00</text>
+                                <text class="chart-label" x="75" y="145" text-anchor="middle">06:00</text>
+                                <text class="chart-label" x="150" y="145" text-anchor="middle">12:00</text>
+                                <text class="chart-label" x="225" y="145" text-anchor="middle">18:00</text>
+                                <text class="chart-label" x="300" y="145" text-anchor="end">24:00</text>
+                            </svg>
+                        </div>
+                        <!-- Doughnut Chart -->
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                            <h2 class="text-lg font-semibold text-white mb-4">Vehicle Types</h2>
+                            <!-- Inline SVG Donut Chart -->
+                            <svg viewBox="-1 -1 34 34" class="w-full h-auto max-h-[200px] mx-auto chart-donut">
+                                <circle class="chart-donut-segment" cx="16" cy="16" r="15.915" fill="transparent" stroke="#3b82f6" stroke-width="3" stroke-dasharray="60 40"></circle>
+                                <circle class="chart-donut-segment" cx="16" cy="16" r="15.915" fill="transparent" stroke="#10b981" stroke-width="3" stroke-dasharray="25 75" stroke-dashoffset="-60"></circle>
+                                <circle class="chart-donut-segment" cx="16" cy="16" r="15.915" fill="transparent" stroke="#f59e0b" stroke-width="3" stroke-dasharray="15 85" stroke-dashoffset="-85"></circle>
+                                <text x="16" y="18" text-anchor="middle" class="fill-white text-lg font-bold">100%</text>
+                            </svg>
+                            <ul class="mt-4 space-y-2">
+                                <li class="flex items-center text-sm">
+                                    <span class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                                    <span class="text-gray-300">Cars: <span class="font-medium text-white">60%</span></span>
+                                </li>
+                                <li class="flex items-center text-sm">
+                                    <span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                                    <span class="text-gray-300">Trucks/Buses: <span class="font-medium text-white">25%</span></span>
+                                </li>
+                                <li class="flex items-center text-sm">
+                                    <span class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>
+                                    <span class="text-gray-300">Motorcycles: <span class="font-medium text-white">15%</span></span>
+                                </li>
+                            </ul>
+                        </div>
+                        <!-- Bar Chart -->
+                        <div class="lg:col-span-3 bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                            <h2 class="text-lg font-semibold text-white mb-4">Average Wait Time by Lane</h2>
+                            <!-- Inline SVG Bar Chart -->
+                            <svg viewBox="0 0 300 150" class="w-full h-auto">
+                                <!-- Grid Lines -->
+                                <line class="chart-grid-line" x1="0" y1="30" x2="300" y2="30"></line>
+                                <line class="chart-grid-line" x1="0" y1="60" x2="300" y2="60"></line>
+                                <line class="chart-grid-line" x1="0" y1="90" x2="300" y2="90"></line>
+                                <line class="chart-grid-line" x1="0" y1="120" x2="300" y2="120"></line>
+                                <!-- Bars -->
+                                <rect class="chart-bar" x="30" y="70" width="40" height="60"></rect>
+                                <rect class="chart-bar" x="100" y="50" width="40" height="80"></rect>
+                                <rect class="chart-bar" x="170" y="90" width="40" height="40"></rect>
+                                <rect class="chart-bar" x="240" y="30" width="40" height="100"></rect>
+                                <!-- X-Axis Labels -->
+                                <text class="chart-label" x="50" y="145" text-anchor="middle">N-Bound</text>
+                                <text class="chart-label" x="120" y="145" text-anchor="middle">S-Bound</text>
+                                <text class="chart-label" x="190" y="145" text-anchor="middle">E-Bound</t>
+                                <text class="chart-label" x="260" y="145" text-anchor="middle">W-Bound</text>
+                                <!-- Y-Axis Labels -->
+                                <text class="chart-label" x="10" y="120" text-anchor="end">10s</text>
+                                <text class="chart-label" x="10" y="90" text-anchor="end">20s</text>
+                                <text class="chart-label" x="10" y="60" text-anchor="end">30s</text>
+                                <text class="chart-label" x="10" y="30" text-anchor="end">40s</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal (hidden by default) -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black/70 z-40 hidden"></div>
+    <div id="modal"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl z-50 p-6 w-full max-w-md hidden">
+        <h3 id="modal-title" class="text-lg font-medium text-white">Analyzing Image...</h3>
+        <p id="modal-body" class="mt-2 text-sm text-gray-300">Please wait while the detection model processes the image.</p>
+        <div class="mt-4 flex justify-end">
+            <button id="modal-close-btn"
+                class="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-500">
+                Close
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- State ---
+            let simInterval = null;
+            let state = {
+                isRunning: false,
+                activeTab: 'live',
+                lightPhase: 'ns', // 'ns' or 'ew'
+                phaseTimer: 0
+            };
+
+            // --- Elements ---
+            const startBtn = document.getElementById('start-sim-btn');
+            const stopBtn = document.getElementById('stop-sim-btn');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Live View Elements
+            const counts = {
+                n: document.getElementById('count-n'),
+                s: document.getElementById('count-s'),
+                e: document.getElementById('count-e'),
+                w: document.getElementById('count-w')
+            };
+            const lights = {
+                n: { r: document.getElementById('light-n-r'), y: document.getElementById('light-n-y'), g: document.getElementById('light-n-g') },
+                s: { r: document.getElementById('light-s-r'), y: document.getElementById('light-s-y'), g: document.getElementById('light-s-g') },
+                e: { r: document.getElementById('light-e-r'), y: document.getElementById('light-e-y'), g: document.getElementById('light-e-g') },
+                w: { r: document.getElementById('light-w-r'), y: document.getElementById('light-w-y'), g: document.getElementById('light-w-g') }
+            };
+            const metricTotal = document.getElementById('metric-total');
+            const metricWait = document.getElementById('metric-wait');
+            const metricFlow = document.getElementById('metric-flow');
+            const alertBox = document.getElementById('alert-box');
+
+            // Detection Tab Elements
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('file-input');
+            const detectionResults = document.getElementById('detection-results');
+            
+            // Modal Elements
+            const modalBackdrop = document.getElementById('modal-backdrop');
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            // --- Utility Functions ---
+            const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+            const showModal = (title, body, showClose = false) => {
+                modalTitle.textContent = title;
+                modalBody.textContent = body;
+                modalCloseBtn.style.display = showClose ? 'block' : 'none';
+                modalBackdrop.classList.remove('hidden');
+                modal.classList.remove('hidden');
+            };
+
+            const hideModal = () => {
+                modalBackdrop.classList.add('hidden');
+                modal.classList.add('hidden');
+            };
+
+            // --- UI Update Function ---
+            function updateUI() {
+                // Update Status
+                if (state.isRunning) {
+                    statusDot.classList.remove('bg-red-500', 'shadow-red-500/50');
+                    statusDot.classList.add('bg-green-500', 'shadow-green-500/50', 'animate-pulse');
+                    statusText.textContent = 'Live';
+                    statusText.classList.remove('text-red-400');
+                    statusText.classList.add('text-green-400');
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } else {
+                    statusDot.classList.remove('bg-green-500', 'shadow-green-500/50', 'animate-pulse');
+                    statusDot.classList.add('bg-red-500', 'shadow-red-500/50');
+                    statusText.textContent = 'Offline';
+                    statusText.classList.remove('text-green-400');
+                    statusText.classList.add('text-red-400');
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    resetLiveData();
+                }
+
+                // Update Tabs
+                tabContents.forEach(content => {
+                    content.classList.toggle('active', content.id === `tab-${state.activeTab}`);
+                });
+                tabButtons.forEach(button => {
+                    const isSelected = button.dataset.tab === state.activeTab;
+                    button.setAttribute('aria-selected', isSelected);
+                    button.classList.toggle('border-blue-500', isSelected);
+                    button.classList.toggle('text-white', isSelected);
+                    button.classList.toggle('border-transparent', !isSelected);
+                    button.classList.toggle('text-gray-400', !isSelected);
+                });
+            }
+            
+            // --- Live Data Simulation ---
+            function resetLiveData() {
+                Object.values(counts).forEach(el => el.textContent = '0');
+                metricTotal.textContent = '0';
+                metricWait.textContent = '0s';
+                metricFlow.textContent = '0 veh/hr';
+                setTrafficLight('ns', 'red');
+                setTrafficLight('ew', 'green'); // Default startup state
+                alertBox.classList.add('hidden');
+            }
+            
+            function setTrafficLight(direction, color) {
+                const axes = direction === 'ns' ? ['n', 's'] : ['e', 'w'];
+                const colors = ['r', 'y', 'g'];
+                
+                axes.forEach(ax => {
+                    colors.forEach(c => {
+                        lights[ax][c].classList.remove('red', 'yellow', 'green');
+                    });
+                    if (color === 'red') lights[ax].r.classList.add('red');
+                    if (color === 'yellow') lights[ax].y.classList.add('yellow');
+                    if (color === 'green') lights[ax].g.classList.add('green');
+                });
+            }
+
+            function simulationLoop() {
+                const PHASE_GREEN = 10; // 10 ticks = 20s
+                const PHASE_YELLOW = 2; // 2 ticks = 4s
+                state.phaseTimer++;
+
+                let totalVehicles = 0;
+                
+                // 1. Update Traffic Lights
+                if (state.lightPhase === 'ns') {
+                    if (state.phaseTimer < PHASE_GREEN) {
+                        setTrafficLight('ns', 'green');
+                        setTrafficLight('ew', 'red');
+                    } else if (state.phaseTimer < (PHASE_GREEN + PHASE_YELLOW)) {
+                        setTrafficLight('ns', 'yellow');
+                        setTrafficLight('ew', 'red');
+                    } else {
+                        state.lightPhase = 'ew';
+                        state.phaseTimer = 0;
+                    }
+                } else { // ew phase
+                     if (state.phaseTimer < PHASE_GREEN) {
+                        setTrafficLight('ns', 'red');
+                        setTrafficLight('ew', 'green');
+                    } else if (state.phaseTimer < (PHASE_GREEN + PHASE_YELLOW)) {
+                        setTrafficLight('ns', 'red');
+                        setTrafficLight('ew', 'yellow');
+                    } else {
+                        state.lightPhase = 'ns';
+                        state.phaseTimer = 0;
+                    }
+                }
+                
+                // 2. Update Vehicle Counts
+                ['n', 's', 'e', 'w'].forEach(dir => {
+                    let currentCount = parseInt(counts[dir].textContent);
+                    let isGreen = lights[dir].g.classList.contains('green');
+                    
+                    // Add new vehicles
+                    if (Math.random() < 0.5) currentCount += randInt(0, 3);
+                    
+                    // Subtract vehicles on green
+                    if (isGreen && currentCount > 0) {
+                        currentCount -= randInt(1, Math.min(currentCount, 5));
+                    }
+                    
+                    counts[dir].textContent = currentCount;
+                    totalVehicles += currentCount;
+                });
+                
+                // 3. Update Metrics
+                metricTotal.textContent = totalVehicles;
+                metricWait.textContent = `${randInt(5, 45)}s`;
+                metricFlow.textContent = `${randInt(150, 600)} veh/hr`;
+                
+                // 4. Random Alert
+                if (Math.random() < 0.05) { // 5% chance per tick
+                    alertBox.classList.remove('hidden');
+                } else if (Math.random() < 0.2) { // 20% chance to clear
+                     alertBox.classList.add('hidden');
+                }
+            }
+
+            // --- Event Listeners ---
+            
+            // Sim Controls
+            startBtn.addEventListener('click', () => {
+                state.isRunning = true;
+                simInterval = setInterval(simulationLoop, 2000); // Update every 2s
+                updateUI();
+            });
+
+            stopBtn.addEventListener('click', () => {
+                state.isRunning = false;
+                clearInterval(simInterval);
+                simInterval = null;
+                updateUI();
+            });
+
+            // Tabs
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    state.activeTab = button.dataset.tab;
+                    updateUI();
+                });
+            });
+
+            // Modal
+            modalCloseBtn.addEventListener('click', hideModal);
+            modalBackdrop.addEventListener('click', hideModal);
+            
+            // File Dropzone
+            dropzone.addEventListener('click', () => fileInput.click());
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('dragover');
+            });
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+            fileInput.addEventListener('change', (e) => {
+                 if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+            
+            function handleFile(file) {
+                if (!file.type.startsWith('image/')) {
+                    showModal('Invalid File', 'Please upload a PNG or JPG image.', true);
+                    return;
+                }
+                
+                // Simulate analysis
+                showModal('Analyzing Image...', 'Please wait while the detection model processes the image.', false);
+                setTimeout(() => {
+                    detectionResults.classList.remove('hidden');
+                    // In a real app, you'd update the results_src and text here
+                    hideModal();
+                }, 2500);
+            }
+
+            // --- Initial UI Setup ---
+            updateUI();
+        });
+    </script>
+</body>
+
+</html>
