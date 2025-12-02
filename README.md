@@ -1,18 +1,11 @@
-# AI-Powered Traffic Management System v2.0
 
-[![CI/CD Pipeline](https://github.com/aaron-seq/AI-ML-Based-traffic-management-system/actions/workflows/ci.yml/badge.svg)](https://github.com/aaron-seq/AI-ML-Based-traffic-management-system/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/aaron-seq/AI-ML-Based-traffic-management-system/branch/main/graph/badge.svg)](https://codecov.io/gh/aaron-seq/AI-ML-Based-traffic-management-system)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg)](https://fastapi.tiangolo.com/)
-[![YOLOv8](https://img.shields.io/badge/YOLOv8-Latest-FF6B6B.svg)](https://github.com/ultralytics/ultralytics)
 
 > **Modern, intelligent traffic control system with real-time vehicle detection, adaptive signal optimization, and comprehensive analytics dashboard.**
 
 ## Features
 
 ### AI-Powered Detection
-- **YOLOv8 Integration**: State-of-the-art vehicle detection with 95%+ accuracy
+- **YOLOv5 Integration**: State-of-the-art vehicle detection with 95%+ accuracy
 - **Real-time Processing**: Process traffic images in <200ms
 - **Emergency Vehicle Detection**: Automatic priority handling for emergency vehicles
 - **Multi-class Recognition**: Cars, trucks, buses, motorcycles, pedestrians
@@ -27,7 +20,6 @@
 
 ### Modern Web Architecture
 - **FastAPI Backend**: High-performance async API with OpenAPI documentation
-- **React Dashboard**: Real-time traffic monitoring and control interface
 - **WebSocket Support**: Live traffic data streaming
 - **Mobile Responsive**: Works seamlessly on all devices
 - **REST API**: Comprehensive API for third-party integrations
@@ -50,7 +42,7 @@
 
 ```
 ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ React Frontend  │◄──►│ FastAPI Backend │◄──►│ YOLOv8 Model    │
+│ React Frontend  │◄──►│ FastAPI Backend │◄──►│ YOLOv5 Model    │
 │ (Dashboard)     │ │ (API Server)    │ │ (AI Detection)  │
 └─────────────────┘ └─────────────────┘ └─────────────────┘
          │                    │                    │
@@ -132,36 +124,8 @@ npm run dev
 npm run build
 ```
 
-## Cloud Deployment
 
-### Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/aaron-seq/AI-ML-Based-traffic-management-system)
-
-1. Connect your GitHub repository to Vercel
-2. Configure environment variables from `.env.example`
-3. Deploy with one click!
-
-### Deploy to Railway
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/new?template=https://github.com/aaron-seq/AI-ML-Based-traffic-management-system)
-
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
-
-# Login and deploy
-railway login
-railway init
-railway up
-```
-
-### Deploy to Render
-
-1. Fork this repository
-2. Connect to Render using `render.yaml` configuration
-3. Configure environment variables
-4. Deploy automatically
 
 ## Configuration
 
@@ -193,10 +157,10 @@ TRAFFIC_MONGODB_CONNECTION_STRING=mongodb://localhost:27017
 ```python
 # Available YOLOv8 models
 MODEL_OPTIONS = {
-    "yolov8n.pt": "Nano (6MB, fastest)",
-    "yolov8s.pt": "Small (22MB, balanced)", 
-    "yolov8m.pt": "Medium (50MB, accurate)",
-    "yolov8l.pt": "Large (87MB, most accurate)"
+    "yolov5n.pt": "Nano (6MB, fastest)",
+    "yolov5s.pt": "Small (22MB, balanced)", 
+    "yolov5m.pt": "Medium (50MB, accurate)",
+    "yolov5l.pt": "Large (87MB, most accurate)"
 }
 ```
 
@@ -371,11 +335,7 @@ npm run type-check
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support & Community
 
-- **Issues**: [GitHub Issues](https://github.com/aaron-seq/AI-ML-Based-traffic-management-system/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/aaron-seq/AI-ML-Based-traffic-management-system/discussions)
-- **Email**: [aaronsequeira12@gmail.com](mailto:aaronsequeira12@gmail.com)
 
 ## Acknowledgments
 
@@ -398,7 +358,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **⭐ Star this repository if you found it helpful!**
 
-**Made with ❤️ by [Aaron Sequeira](https://github.com/aaron-seq)**
+**Made with ❤️ by [Abhishek Yadav](https://github.com/En-avii)**
 
 *© 2025 AI Traffic Management System. All rights reserved.*
 
